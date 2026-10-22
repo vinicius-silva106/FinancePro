@@ -70,18 +70,21 @@ ALTER TABLE public.categories ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.transactions ENABLE ROW LEVEL SECURITY;
 
 -- Políticas para Contas
+DROP POLICY IF EXISTS "Usuário gerencia apenas suas próprias contas" ON public.accounts;
 CREATE POLICY "Usuário gerencia apenas suas próprias contas"
     ON public.accounts FOR ALL
     USING (auth.uid() = user_id)
     WITH CHECK (auth.uid() = user_id);
 
 -- Políticas para Categorias
+DROP POLICY IF EXISTS "Usuário gerencia apenas suas próprias categorias" ON public.categories;
 CREATE POLICY "Usuário gerencia apenas suas próprias categorias"
     ON public.categories FOR ALL
     USING (auth.uid() = user_id)
     WITH CHECK (auth.uid() = user_id);
 
 -- Políticas para Transações
+DROP POLICY IF EXISTS "Usuário gerencia apenas suas próprias transações" ON public.transactions;
 CREATE POLICY "Usuário gerencia apenas suas próprias transações"
     ON public.transactions FOR ALL
     USING (auth.uid() = user_id)
