@@ -1,10 +1,17 @@
 -- ==============================================================================
--- FINANCEPRO - SCHEMA COMPLETO PARA O SUPABASE (POSTGRESQL + AUTH + RLS)
+-- FINANCEPRO - SCHEMA COMPLETO E LIMPO PARA O SUPABASE (POSTGRESQL + AUTH + RLS)
 -- Cole este script no SQL Editor do seu projeto no Supabase (supabase.com)
 -- ==============================================================================
 
+-- 0. Limpeza prévia de versões antigas (garante estrutura 100% atualizada)
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+DROP FUNCTION IF EXISTS public.handle_new_user();
+DROP TABLE IF EXISTS public.transactions CASCADE;
+DROP TABLE IF EXISTS public.categories CASCADE;
+DROP TABLE IF EXISTS public.accounts CASCADE;
+
 -- 1. Tabela de Contas e Cartões
-CREATE TABLE IF NOT EXISTS public.accounts (
+CREATE TABLE public.accounts (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
     name TEXT NOT NULL,
@@ -21,7 +28,7 @@ CREATE TABLE IF NOT EXISTS public.accounts (
 );
 
 -- 2. Tabela de Categorias e Orçamentos
-CREATE TABLE IF NOT EXISTS public.categories (
+CREATE TABLE public.categories (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
     name TEXT NOT NULL,
@@ -33,7 +40,7 @@ CREATE TABLE IF NOT EXISTS public.categories (
 );
 
 -- 3. Tabela de Transações (Receitas, Despesas, Transferências, Parcelas)
-CREATE TABLE IF NOT EXISTS public.transactions (
+CREATE TABLE public.transactions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
     description TEXT NOT NULL,
@@ -56,12 +63,12 @@ CREATE TABLE IF NOT EXISTS public.transactions (
 );
 
 -- Índices de Performance
-CREATE INDEX IF NOT EXISTS idx_tx_user_date ON public.transactions(user_id, date);
-CREATE INDEX IF NOT EXISTS idx_tx_user_account ON public.transactions(user_id, account_id);
-CREATE INDEX IF NOT EXISTS idx_tx_user_category ON public.transactions(user_id, category_id);
+CREATE INDEX idx_tx_user_date ON public.transactions(user_id, date);
+CREATE INDEX idx_tx_user_account ON public.transactions(user_id, account_id);
+CREATE INDEX idx_tx_user_category ON public.transactions(user_id, category_id);
 
 -- ==============================================================================
--- 4. SEGURANÇA MÁXIMA: ROW LEVEL SECURITY (RLS)
+-- 4. SEGURANÇA: ROW LEVEL SECURITY (RLS)
 -- Garante que NENHUM usuário consiga ler ou alterar dados de outros usuários.
 -- ==============================================================================
 
@@ -70,21 +77,18 @@ ALTER TABLE public.categories ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.transactions ENABLE ROW LEVEL SECURITY;
 
 -- Políticas para Contas
-DROP POLICY IF EXISTS "Usuário gerencia apenas suas próprias contas" ON public.accounts;
 CREATE POLICY "Usuário gerencia apenas suas próprias contas"
     ON public.accounts FOR ALL
     USING (auth.uid() = user_id)
     WITH CHECK (auth.uid() = user_id);
 
 -- Políticas para Categorias
-DROP POLICY IF EXISTS "Usuário gerencia apenas suas próprias categorias" ON public.categories;
 CREATE POLICY "Usuário gerencia apenas suas próprias categorias"
     ON public.categories FOR ALL
     USING (auth.uid() = user_id)
     WITH CHECK (auth.uid() = user_id);
 
 -- Políticas para Transações
-DROP POLICY IF EXISTS "Usuário gerencia apenas suas próprias transações" ON public.transactions;
 CREATE POLICY "Usuário gerencia apenas suas próprias transações"
     ON public.transactions FOR ALL
     USING (auth.uid() = user_id)
@@ -102,13 +106,6 @@ DECLARE
     acc_checking UUID;
     acc_card UUID;
     acc_savings UUID;
-    cat_salario UUID;
-    cat_moradia UUID;
-    cat_alimentacao UUID;
-    cat_transporte UUID;
-    cat_lazer UUID;
-    cat_saude UUID;
-    cat_assinaturas UUID;
 BEGIN
     -- 1. Contas Padrão
     INSERT INTO public.accounts (user_id, name, type, initial_balance, current_balance, color, icon)
@@ -158,3 +155,6 @@ DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE TRIGGER on_auth_user_created
     AFTER INSERT ON auth.users
     FOR EACH ROW EXECUTE PROCEDURE public.handle_new_user();
+
+-- Notifica o PostgREST para recarregar o schema cache imediatamente
+NOTIFY pgrst, 'reload schema';
