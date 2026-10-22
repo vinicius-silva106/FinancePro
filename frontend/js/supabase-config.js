@@ -1,0 +1,3 @@
+// FinancePro - Supabase Cloud Configuration
+window.ENV_SUPABASE_URL = "https://xhafnegynnnmkfzowzth.supabase.co";
+window.ENV_SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhoYWZuZWd5bm5ubWtmem93enRoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgzMDc4MjUsImV4cCI6MjEwMzg4MzgyNX0.7pCLkRhliPDpJ5qYlukbkMCJ8YQriQe2Qr-iItjkP5k";

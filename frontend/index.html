@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>FinancePro - Gerenciador Inteligente de Finanças e Fluxo de Caixa</title>
+  <meta name="description" content="FinancePro - Gerenciador financeiro pessoal moderno, flexível e multiplataforma para PC e celular com previsão futura de fluxo de caixa, cartões e orçamentos.">
+  <meta name="theme-color" content="#090D16">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="FinancePro">
+
+  <!-- Manifest PWA -->
+  <link rel="manifest" href="/manifest.json">
+  <link rel="icon" type="image/png" href="/icons/icon-192.png">
+  <link rel="apple-touch-icon" href="/icons/icon-192.png">
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <!-- Stylesheets -->
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/animations.css">
+
+  <!-- Supabase JS Client for Cloud Mode -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+
+  <div class="app-container">
+    <!-- Desktop Sidebar -->
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="22 7 13.5 15.5 8.5 10.5 2 17"></polyline>
+            <polyline points="16 7 22 7 22 13"></polyline>
+          </svg>
+        </div>
+        <div class="brand-text">
+          <h1>FinancePro</h1>
+          <span>Gestão Inteligente</span>
+        </div>
+      </div>
+
+      <nav class="nav-menu">
+        <div class="nav-item active" data-tab="dashboard">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="3" width="7" height="9" rx="1"></rect>
+            <rect x="14" y="3" width="7" height="5" rx="1"></rect>
+            <rect x="14" y="12" width="7" height="9" rx="1"></rect>
+            <rect x="3" y="16" width="7" height="5" rx="1"></rect>
+          </svg>
+          Painel Geral
+        </div>
+
+        <div class="nav-item" data-tab="transactions">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="8" y1="6" x2="21" y2="6"></line>
+            <line x1="8" y1="12" x2="21" y2="12"></line>
+            <line x1="8" y1="18" x2="21" y2="18"></line>
+            <line x1="3" y1="6" x2="3.01" y2="6"></line>
+            <line x1="3" y1="12" x2="3.01" y2="12"></line>
+            <line x1="3" y1="18" x2="3.01" y2="18"></line>
+          </svg>
+          Extrato & Lançamentos
+        </div>
+
+        <div class="nav-item" data-tab="forecast">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M3 3v18h18"></path>
+            <path d="m19 9-5 5-4-4-3 3"></path>
+          </svg>
+          Previsão Futura
+        </div>
+
+        <div class="nav-item" data-tab="accounts">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect>
+            <line x1="1" y1="10" x2="23" y2="10"></line>
+          </svg>
+          Contas & Cartões
+        </div>
+
+        <div class="nav-item" data-tab="budgets">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"></circle>
+            <circle cx="12" cy="12" r="6"></circle>
+            <circle cx="12" cy="12" r="2"></circle>
+          </svg>
+          Metas & Orçamentos
+        </div>
+      </nav>
+
+      <div class="sidebar-footer">
+        <button class="quick-add-btn" data-modal="modal-new-tx">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+          Novo Lançamento
+        </button>
+
+        <button class="nav-item" style="border: 1px dashed var(--border-color); justify-content: center; margin-top: 6px;" data-modal="modal-import-bank">
+          📥 Importar OFX / CSV
+        </button>
+
+        <a href="/api/export/csv" class="nav-item" style="justify-content: center; font-size: 0.82rem; color: var(--text-muted);">
+          📊 Exportar para Excel/CSV
+        </a>
+
+        <button id="btn-cloud-status" class="nav-item" style="justify-content: center; font-size: 0.82rem;" data-modal="modal-cloud-auth">
+          ☁️ Conectar à Nuvem
+        </button>
+
+        <button id="btn-install-pwa" class="nav-item" style="display: none; background: rgba(16, 185, 129, 0.15); color: var(--income-color); border-color: rgba(16, 185, 129, 0.3); justify-content: center;">
+          📱 Instalar no Celular
+        </button>
+      </div>
+    </aside>
+
+    <!-- Main Wrapper -->
+    <main class="main-wrapper">
+      <!-- Top Header -->
+      <header class="top-header">
+        <div class="header-title-area">
+          <h2 id="page-title">Painel Geral</h2>
+          <div class="month-navigator">
+            <button class="month-nav-arrow" id="prev-month-btn" title="Mês Anterior">‹</button>
+            <div class="month-active-display" id="month-display-btn">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+              <span id="current-month-label">Carregando...</span>
+              <span class="month-dropdown-caret">▾</span>
+            </div>
+            <button class="month-nav-arrow" id="next-month-btn" title="Próximo Mês">›</button>
+
+            <!-- Sleek Glassmorphic Month Picker Popup -->
+            <div class="month-picker-popup" id="month-picker-popup">
+              <div class="month-picker-year-row">
+                <button class="year-nav-btn" id="prev-year-btn">‹</button>
+                <span id="picker-year-label">2026</span>
+                <button class="year-nav-btn" id="next-year-btn">›</button>
+              </div>
+              <div class="month-picker-grid" id="month-picker-grid">
+                <!-- 12 months buttons rendered dynamically -->
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="header-actions">
+          <button class="cloud-status-pill" data-modal="modal-cloud-auth" title="Configurar Supabase / Nuvem">
+            ☁️ Nuvem
+          </button>
+          <button class="icon-btn" id="theme-toggle-btn" title="Alternar Modo Claro/Escuro">
+            🌓
+          </button>
+          <button class="btn btn-primary" style="display: flex; align-items: center; gap: 8px;" data-modal="modal-new-tx">
+            <span>+</span> Novo
+          </button>
+        </div>
+      </header>
+
+      <!-- Content Views -->
+      <div class="content-body">
+
+        <!-- TAB 1: DASHBOARD -->
+        <div id="view-dashboard" class="tab-view">
+          <!-- Metric Cards -->
+          <div class="metrics-grid">
+            <div class="metric-card liquid">
+              <div class="metric-header">
+                <span>Saldo Líquido</span>
+                <div class="metric-icon">🏛️</div>
+              </div>
+              <div class="metric-value tabular-nums" id="metric-liquid-balance">R$ 0,00</div>
+              <div class="metric-sub">Contas correntes, poupança e dinheiro</div>
+            </div>
+
+            <div class="metric-card expense">
+              <div class="metric-header">
+                <span>Faturas de Cartão</span>
+                <div class="metric-icon">💳</div>
+              </div>
+              <div class="metric-value tabular-nums" id="metric-credit-debt">R$ 0,00</div>
+              <div class="metric-sub">Gastos acumulados a pagar</div>
+            </div>
+
+            <div class="metric-card income">
+              <div class="metric-header">
+                <span>Receitas do Mês</span>
+                <div class="metric-icon">↑</div>
+              </div>
+              <div class="metric-value tabular-nums" id="metric-month-income">R$ 0,00</div>
+              <div class="metric-sub">Salários e entradas confirmadas</div>
+            </div>
+
+            <div class="metric-card expense">
+              <div class="metric-header">
+                <span>Despesas do Mês</span>
+                <div class="metric-icon">↓</div>
+              </div>
+              <div class="metric-value tabular-nums" id="metric-month-expense">R$ 0,00</div>
+              <div class="metric-sub">Balanço: <strong id="metric-net-balance">R$ 0,00</strong></div>
+            </div>
+          </div>
+
+          <!-- Section: Forecast Runway + Categories Breakdown -->
+          <div class="dashboard-grid" style="margin-top: 24px;">
+            <div class="section-card">
+              <div class="card-title-row">
+                <h3>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"></path><path d="m19 9-5 5-4-4-3 3"></path></svg>
+                  Previsão Futura de Saldo (Próximos 45 dias)
+                </h3>
+                <span id="forecast-risk-badge" class="badge badge-safe">Fluxo Saudável</span>
+              </div>
+
+              <div id="forecast-chart-container" class="chart-container" style="height: 240px;"></div>
+
+              <div class="forecast-stats">
+                <div class="forecast-stat-box">
+                  <span>Menor Saldo Previsto</span>
+                  <strong id="forecast-min-balance" class="tabular-nums">R$ 0,00</strong>
+                </div>
+                <div class="forecast-stat-box">
+                  <span>Saldo Projetado em 45 dias</span>
+                  <strong id="forecast-end-balance" class="tabular-nums">R$ 0,00</strong>
+                </div>
+                <div class="forecast-stat-box" style="display: flex; align-items: center; justify-content: center;">
+                  <button class="btn btn-secondary" style="width: 100%; font-size: 0.8rem;" onclick="switchTab('forecast')">Ver Projeção Detalhada →</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="section-card">
+              <div class="card-title-row">
+                <h3>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                  Despesas por Categoria
+                </h3>
+              </div>
+              <div id="dashboard-categories-list" class="category-progress-list"></div>
+            </div>
+          </div>
+
+          <!-- Section: Daily Expenses Timeline (Linha do Tempo) -->
+          <div class="section-card" style="margin-top: 24px;">
+            <div class="card-title-row">
+              <h3>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+                Linha do Tempo de Despesas (Evolução Diária no Mês)
+              </h3>
+              <span style="font-size: 0.8rem; color: var(--text-muted);">Barras: Gasto no Dia • Linha: Total Acumulado</span>
+            </div>
+            <div id="expenses-timeline-chart-container" class="chart-container" style="height: 220px; margin-top: 10px;"></div>
+          </div>
+
+          <!-- Section: Smart Financial Insights -->
+          <div class="section-card" style="margin-top: 24px;">
+            <div class="card-title-row">
+              <h3>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+                Insights Financeiros & Diagnóstico do Mês
+              </h3>
+              <span class="badge badge-safe">Análise em Tempo Real</span>
+            </div>
+            <div id="dashboard-insights-grid" class="insights-grid" style="margin-top: 8px;"></div>
+          </div>
+
+          <!-- Section: Recent Transactions -->
+          <div class="section-card" style="margin-top: 24px;">
+            <div class="card-title-row">
+              <h3>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                Últimas Movimentações
+              </h3>
+              <button class="btn btn-secondary" style="font-size: 0.82rem;" onclick="switchTab('transactions')">Ver Extrato Completo</button>
+            </div>
+            <div id="dashboard-recent-txs" class="tx-list"></div>
+          </div>
+        </div>
+
+        <!-- TAB 2: TRANSACTIONS LIST -->
+        <div id="view-transactions" class="tab-view" style="display: none;">
+          <div class="section-card">
+            <div class="card-title-row">
+              <h3>Extrato Completo de Transações</h3>
+              <div style="display: flex; gap: 10px;">
+                <button class="btn btn-secondary" data-modal="modal-import-bank">📥 Importar Extrato</button>
+                <button class="btn btn-primary" data-modal="modal-new-tx">+ Nova Transação</button>
+              </div>
+            </div>
+
+            <div class="data-table-container">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Data</th>
+                    <th>Descrição</th>
+                    <th>Categoria</th>
+                    <th>Conta</th>
+                    <th>Valor</th>
+                    <th>Status</th>
+                    <th style="text-align: right;">Ações</th>
+                  </tr>
+                </thead>
+                <tbody id="tx-table-body"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- TAB 3: FULL FORECAST -->
+        <div id="view-forecast" class="tab-view" style="display: none;">
+          <div class="section-card">
+            <div class="card-title-row">
+              <div>
+                <h3>Simulação & Projeção Futura de Caixa</h3>
+                <p style="font-size: 0.82rem; color: var(--text-muted);">Projeção considerando saldo inicial, despesas parceladas, contas fixas recorrentes e receitas agendadas.</p>
+              </div>
+              <div style="display: flex; gap: 8px;">
+                <button class="btn btn-secondary" onclick="renderForecastView(30)">30 Dias</button>
+                <button class="btn btn-secondary" onclick="renderForecastView(60)">60 Dias</button>
+                <button class="btn btn-secondary" onclick="renderForecastView(90)">90 Dias</button>
+              </div>
+            </div>
+
+            <div style="display: flex; gap: 16px; align-items: center; margin-top: 8px;">
+              <span id="full-forecast-badge" class="badge badge-safe">Fluxo Saudável</span>
+            </div>
+
+            <div id="full-forecast-chart" class="chart-container" style="height: 320px; margin-top: 14px;"></div>
+
+            <div class="metrics-grid" style="margin-top: 16px;">
+              <div class="forecast-stat-box">
+                <span>Saldo Inicial</span>
+                <strong id="full-forecast-start" class="tabular-nums">R$ 0,00</strong>
+              </div>
+              <div class="forecast-stat-box">
+                <span>Ponto Mais Baixo</span>
+                <strong id="full-forecast-min" class="tabular-nums">R$ 0,00</strong>
+              </div>
+              <div class="forecast-stat-box">
+                <span>Data Crítica</span>
+                <strong id="full-forecast-min-date">-</strong>
+              </div>
+              <div class="forecast-stat-box">
+                <span>Saldo Final Projetado</span>
+                <strong id="full-forecast-end" class="tabular-nums">R$ 0,00</strong>
+              </div>
+            </div>
+
+            <h4 style="margin-top: 24px; font-size: 1rem;">Cronograma de Lançamentos Futuros que Afetam o Saldo</h4>
+            <div id="forecast-upcoming-events" class="tx-list" style="margin-top: 10px;"></div>
+          </div>
+        </div>
+
+        <!-- TAB 4: ACCOUNTS & CARDS -->
+        <div id="view-accounts" class="tab-view" style="display: none;">
+          <div class="section-card">
+            <div class="card-title-row">
+              <h3>Minhas Contas Bancárias e Cartões</h3>
+              <button class="btn btn-primary" data-modal="modal-new-account">+ Nova Conta/Cartão</button>
+            </div>
+            <div id="accounts-cards-grid" class="accounts-grid" style="margin-top: 14px;"></div>
+          </div>
+        </div>
+
+        <!-- TAB 5: BUDGETS -->
+        <div id="view-budgets" class="tab-view" style="display: none;">
+          <div class="section-card">
+            <div class="card-title-row">
+              <h3>Metas de Gastos & Orçamento por Categoria</h3>
+              <p style="font-size: 0.82rem; color: var(--text-muted);">Defina tetos mensais para controlar seus gastos antes de estourar o limite.</p>
+            </div>
+          </div>
+          <div id="budgets-list-container" style="display: flex; flex-direction: column; gap: 14px; margin-top: 14px;"></div>
+        </div>
+
+      </div>
+    </main>
+
+    <!-- Mobile Bottom Navigation Bar -->
+    <nav class="bottom-nav">
+      <div class="bottom-nav-item active" data-tab="dashboard">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9" rx="1"></rect><rect x="14" y="3" width="7" height="5" rx="1"></rect><rect x="14" y="12" width="7" height="9" rx="1"></rect><rect x="3" y="16" width="7" height="5" rx="1"></rect></svg>
+        <span>Início</span>
+      </div>
+      <div class="bottom-nav-item" data-tab="transactions">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line></svg>
+        <span>Extrato</span>
+      </div>
+      <div class="bottom-nav-item" data-tab="forecast">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"></path><path d="m19 9-5 5-4-4-3 3"></path></svg>
+        <span>Previsão</span>
+      </div>
+      <div class="bottom-nav-item" data-tab="accounts">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect><line x1="1" y1="10" x2="23" y2="10"></line></svg>
+        <span>Contas</span>
+      </div>
+      <div class="bottom-nav-item" data-tab="budgets">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="6"></circle></svg>
+        <span>Metas</span>
+      </div>
+    </nav>
+
+    <!-- Mobile Floating Action Button -->
+    <button class="fab-mobile" data-modal="modal-new-tx" title="Novo Lançamento">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+    </button>
+  </div>
+
+  <!-- ==================== MODALS ==================== -->
+
+  <!-- Modal: Novo Lançamento -->
+  <div id="modal-new-tx" class="modal-overlay">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Novo Lançamento Financeiro</h3>
+        <button class="icon-btn modal-close" style="width: 32px; height: 32px;">✕</button>
+      </div>
+      <form id="form-new-tx">
+        <div class="modal-body">
+          <div class="type-toggle">
+            <button type="button" class="type-toggle-btn active expense" data-type="expense">Despesa</button>
+            <button type="button" class="type-toggle-btn income" data-type="income">Receita</button>
+            <button type="button" class="type-toggle-btn transfer" data-type="transfer">Transferência</button>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="tx-amount">Valor (R$) *</label>
+              <input type="number" step="0.01" min="0.01" id="tx-amount" class="form-control" placeholder="0,00" required autofocus>
+            </div>
+            <div class="form-group">
+              <label for="tx-date">Data de Competência *</label>
+              <input type="date" id="tx-date" class="form-control" required>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="tx-desc">Descrição / Estabelecimento *</label>
+            <input type="text" id="tx-desc" class="form-control" placeholder="Ex: Supermercado Pão de Açúcar, Salário" required>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="tx-account">Conta de Origem *</label>
+              <select id="tx-account" class="form-control" required></select>
+            </div>
+
+            <div class="form-group" id="tx-dest-group" style="display: none;">
+              <label for="tx-destination-account">Conta de Destino *</label>
+              <select id="tx-destination-account" class="form-control"></select>
+            </div>
+
+            <div class="form-group" id="tx-cat-group">
+              <label for="tx-category">Categoria</label>
+              <select id="tx-category" class="form-control"></select>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="tx-status">Situação</label>
+              <select id="tx-status" class="form-control">
+                <option value="completed">Concluído (Pago/Recebido)</option>
+                <option value="pending">Pendente (Agendado)</option>
+              </select>
+            </div>
+
+            <div class="form-group" id="tx-installments-group">
+              <label for="tx-installments">Parcelamento</label>
+              <select id="tx-installments" class="form-control">
+                <option value="1">À vista (1x)</option>
+                <option value="2">2x parcelas</option>
+                <option value="3">3x parcelas</option>
+                <option value="4">4x parcelas</option>
+                <option value="5">5x parcelas</option>
+                <option value="6">6x parcelas</option>
+                <option value="10">10x parcelas</option>
+                <option value="12">12x parcelas</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group" style="display: flex; flex-direction: row; align-items: center; gap: 8px;">
+            <input type="checkbox" id="tx-recurring" style="width: 18px; height: 18px; cursor: pointer;">
+            <label for="tx-recurring" style="cursor: pointer; margin: 0;">Lançamento fixo mensal recorrente (ex: aluguel, assinatura)</label>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary modal-close">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Salvar Lançamento</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Nova Conta -->
+  <div id="modal-new-account" class="modal-overlay">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Cadastrar Nova Conta ou Cartão</h3>
+        <button class="icon-btn modal-close" style="width: 32px; height: 32px;">✕</button>
+      </div>
+      <form id="form-new-account">
+        <div class="modal-body">
+          <div class="form-group">
+            <label for="acc-name">Nome da Conta *</label>
+            <input type="text" id="acc-name" class="form-control" placeholder="Ex: Inter Conta Corrente, Cartão XP" required>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="acc-type">Tipo de Conta *</label>
+              <select id="acc-type" class="form-control">
+                <option value="checking">Conta Corrente</option>
+                <option value="credit_card">Cartão de Crédito</option>
+                <option value="savings">Poupança / Reserva</option>
+                <option value="cash">Dinheiro em Espécie</option>
+                <option value="investment">Investimento</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="acc-init-balance">Saldo Inicial (R$)</label>
+              <input type="number" step="0.01" id="acc-init-balance" class="form-control" placeholder="0,00">
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="acc-credit-limit">Limite de Crédito (se cartão)</label>
+              <input type="number" step="0.01" id="acc-credit-limit" class="form-control" placeholder="0,00">
+            </div>
+            <div class="form-group">
+              <label for="acc-due-day">Dia de Vencimento</label>
+              <input type="number" min="1" max="31" id="acc-due-day" class="form-control" value="10">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="acc-color">Cor de Destaque</label>
+            <input type="color" id="acc-color" class="form-control" value="#6366F1" style="height: 44px; padding: 4px; cursor: pointer;">
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary modal-close">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Criar Conta</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Importar Extrato OFX/CSV -->
+  <div id="modal-import-bank" class="modal-overlay">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Importar Extrato Bancário</h3>
+        <button class="icon-btn modal-close" style="width: 32px; height: 32px;">✕</button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size: 0.88rem; color: var(--text-secondary);">
+          Exporte o arquivo <strong>.OFX</strong> ou <strong>.CSV</strong> do internet banking do seu banco (Nubank, Itaú, Bradesco, Inter, etc.) e faça o upload abaixo para cadastrar tudo automaticamente.
+        </p>
+
+        <div class="form-group" style="margin-top: 8px;">
+          <label>Selecione o arquivo (.OFX ou .CSV)</label>
+          <input type="file" id="bank-file-input" accept=".ofx,.csv" class="form-control">
+        </div>
+
+        <div class="form-group">
+          <label for="import-account">Vincular à Conta *</label>
+          <select id="import-account" class="form-control"></select>
+        </div>
+
+        <div id="import-preview-list" class="tx-list" style="max-height: 200px; overflow-y: auto; margin-top: 10px;"></div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary modal-close">Cancelar</button>
+        <button type="button" id="btn-confirm-import" class="btn btn-primary" style="display: none;" onclick="confirmImport()">Confirmar e Importar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Conectar Nuvem Supabase / Autenticação -->
+  <div id="modal-cloud-auth" class="modal-overlay">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>☁️ Conectar à Nuvem (Supabase + Vercel)</h3>
+        <button class="icon-btn modal-close" style="width: 32px; height: 32px;">✕</button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size: 0.85rem; color: var(--text-secondary);">
+          Insira as credenciais do seu projeto gratuito no <strong>Supabase</strong> para sincronizar dados na nuvem e acessar de qualquer dispositivo via Vercel.
+        </p>
+
+        <div class="form-group">
+          <label>Project URL (do Supabase)</label>
+          <input type="text" id="cloud-supabase-url" class="form-control" placeholder="https://xyz.supabase.co">
+        </div>
+
+        <div class="form-group">
+          <label>Anon Public Key (do Supabase)</label>
+          <input type="password" id="cloud-supabase-key" class="form-control" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...">
+        </div>
+
+        <button type="button" class="btn btn-secondary" id="btn-save-cloud-config" style="width: 100%;">
+          Salvar Credenciais
+        </button>
+
+        <hr style="border: 0; border-top: 1px solid var(--border-color); margin: 10px 0;">
+
+        <form id="form-cloud-login">
+          <h4 style="font-size: 0.95rem; margin-bottom: 8px;">Acesso do Usuário</h4>
+          <div class="form-group">
+            <label>Seu E-mail</label>
+            <input type="email" id="cloud-email" class="form-control" placeholder="seuemail@exemplo.com">
+          </div>
+          <div class="form-group">
+            <label>Sua Senha</label>
+            <input type="password" id="cloud-password" class="form-control" placeholder="••••••••">
+          </div>
+          <div style="display: flex; gap: 8px; margin-top: 8px;">
+            <button type="submit" class="btn btn-primary" style="flex: 1;">Entrar</button>
+            <button type="button" class="btn btn-secondary" id="btn-cloud-signup" style="flex: 1;">Cadastrar</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast-container" class="toast-container"></div>
+
+  <!-- Scripts -->
+  <script src="/js/charts.js"></script>
+  <script src="/js/supabase-config.js"></script>
+  <script src="/js/supabase-client.js"></script>
+  <script src="/js/api.js"></script>
+  <script src="/js/app.js"></script>
+</body>
+</html>
