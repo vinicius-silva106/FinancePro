@@ -53,8 +53,19 @@ document.addEventListener('DOMContentLoaded', async () => {
   setupEventListeners();
   initMonthSelector();
   setupCloudUI();
+
+  if (window.cloudManager && window.cloudManager.ready) {
+    await window.cloudManager.ready();
+  }
+
   await loadMetadata();
   await switchTab('dashboard');
+
+  if (window.cloudManager && window.cloudManager.isCloudMode && !window.cloudManager.currentUser) {
+    setTimeout(() => {
+      openModal('modal-cloud-login');
+    }, 400);
+  }
 });
 
 // PWA Setup
@@ -685,8 +696,23 @@ function setupCloudUI() {
         return;
       }
       try {
-        await window.cloudManager.signUp(email, pass);
-        showToast('Conta criada! Verifique seu e-mail ou faça login.');
+        const res = await window.cloudManager.signUp(email, pass);
+        if (res && res.session) {
+          showToast('Conta criada e conectada com sucesso!');
+          closeModal();
+          await loadMetadata();
+          await renderDashboard();
+        } else {
+          try {
+            await window.cloudManager.signIn(email, pass);
+            showToast('Conta criada e conectada com sucesso!');
+            closeModal();
+            await loadMetadata();
+            await renderDashboard();
+          } catch {
+            showToast('Conta criada! Faça login com seu e-mail e senha.');
+          }
+        }
       } catch (err) {
         showToast(err.message, 'error');
       }

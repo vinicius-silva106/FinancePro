@@ -5,14 +5,20 @@
 
 const API_BASE = '/api';
 
-const isCloudActive = () => {
-  return window.cloudManager && window.cloudManager.isCloudMode && window.cloudManager.currentUser;
+const isCloudMode = () => {
+  return (window.cloudManager && window.cloudManager.isCloudMode) ||
+         (location.hostname !== 'localhost' && location.hostname !== '127.0.0.1');
+};
+
+const hasActiveUser = () => {
+  return window.cloudManager && window.cloudManager.currentUser;
 };
 
 const api = {
   async getAccounts() {
-    if (isCloudActive()) {
-      return window.cloudManager.getAccounts();
+    if (isCloudMode()) {
+      if (!hasActiveUser()) return [];
+      return (await window.cloudManager.getAccounts()) || [];
     }
     const res = await fetch(`${API_BASE}/accounts`);
     if (!res.ok) throw new Error('Erro ao carregar contas');
@@ -20,7 +26,8 @@ const api = {
   },
 
   async createAccount(data) {
-    if (isCloudActive()) {
+    if (isCloudMode()) {
+      if (!hasActiveUser()) throw new Error('Faça login para criar contas');
       return window.cloudManager.createAccount(data);
     }
     const res = await fetch(`${API_BASE}/accounts`, {
@@ -33,8 +40,9 @@ const api = {
   },
 
   async getCategories() {
-    if (isCloudActive()) {
-      return window.cloudManager.getCategories();
+    if (isCloudMode()) {
+      if (!hasActiveUser()) return [];
+      return (await window.cloudManager.getCategories()) || [];
     }
     const res = await fetch(`${API_BASE}/categories`);
     if (!res.ok) throw new Error('Erro ao carregar categorias');
@@ -42,7 +50,8 @@ const api = {
   },
 
   async createCategory(data) {
-    if (isCloudActive()) {
+    if (isCloudMode()) {
+      if (!hasActiveUser()) throw new Error('Faça login para criar categorias');
       return window.cloudManager.createCategory(data);
     }
     const res = await fetch(`${API_BASE}/categories`, {
@@ -55,8 +64,9 @@ const api = {
   },
 
   async getTransactions(filters = {}) {
-    if (isCloudActive()) {
-      return window.cloudManager.getTransactions(filters);
+    if (isCloudMode()) {
+      if (!hasActiveUser()) return [];
+      return (await window.cloudManager.getTransactions(filters)) || [];
     }
     const params = new URLSearchParams();
     Object.keys(filters).forEach(key => {
@@ -97,7 +107,8 @@ const api = {
   },
 
   async toggleStatus(txId) {
-    if (isCloudActive()) {
+    if (isCloudMode()) {
+      if (!hasActiveUser()) throw new Error('Faça login para alterar status');
       return window.cloudManager.toggleStatus(txId);
     }
     const res = await fetch(`${API_BASE}/transactions/${txId}/toggle-status`, {
@@ -108,7 +119,27 @@ const api = {
   },
 
   async getDashboard(month, year) {
-    if (isCloudActive()) {
+    if (isCloudMode()) {
+      if (!hasActiveUser()) {
+        return {
+          total_liquid: 0,
+          total_credit_debt: 0,
+          month_income: 0,
+          month_expense: 0,
+          net_balance: 0,
+          categories_breakdown: [],
+          recent_transactions: [],
+          daily_expenses_timeline: [],
+          insights: [
+            {
+              type: 'info',
+              icon: '☁️',
+              title: 'Sincronização em Nuvem',
+              description: 'Faça login ou crie sua conta para salvar e carregar seus dados no Supabase.'
+            }
+          ]
+        };
+      }
       // Aggregate client-side for cloud mode
       const [accs, cats, txs] = await Promise.all([
         window.cloudManager.getAccounts(),
@@ -212,7 +243,18 @@ const api = {
   },
 
   async getForecast(days = 60) {
-    if (isCloudActive()) {
+    if (isCloudMode()) {
+      if (!hasActiveUser()) {
+        return {
+          start_balance: 0,
+          end_balance: 0,
+          min_balance: 0,
+          min_date: '',
+          risk_negative: false,
+          days_projected: days,
+          timeline: []
+        };
+      }
       const [accs, txs] = await Promise.all([
         window.cloudManager.getAccounts(),
         window.cloudManager.getTransactions()

@@ -8,6 +8,7 @@ class CloudManager {
     this.client = null;
     this.currentUser = null;
     this.isCloudMode = false;
+    this.initPromise = null;
     this.init();
   }
 
@@ -19,11 +20,25 @@ class CloudManager {
       try {
         this.client = window.supabase.createClient(savedUrl, savedKey);
         this.isCloudMode = true;
-        this.checkAuth();
+        this.initPromise = this.checkAuth();
       } catch (err) {
         console.warn('Erro ao inicializar Supabase:', err);
+        this.initPromise = Promise.resolve(null);
       }
+    } else {
+      const isHostedWeb = location.hostname !== 'localhost' && location.hostname !== '127.0.0.1';
+      if (isHostedWeb) {
+        this.isCloudMode = true;
+      }
+      this.initPromise = Promise.resolve(null);
     }
+  }
+
+  async ready() {
+    if (this.initPromise) {
+      await this.initPromise;
+    }
+    return this.currentUser;
   }
 
   setCredentials(url, key) {
@@ -40,17 +55,27 @@ class CloudManager {
     localStorage.setItem('financepro_supabase_key', key.trim());
     this.client = window.supabase.createClient(url.trim(), key.trim());
     this.isCloudMode = true;
+    this.initPromise = this.checkAuth();
     return true;
   }
 
   async checkAuth() {
     if (!this.client) return null;
     try {
-      const { data: { user } } = await this.client.auth.getUser();
-      this.currentUser = user;
+      const { data: { session }, error } = await this.client.auth.getSession();
+      if (error) throw error;
+      if (session && session.user) {
+        this.currentUser = session.user;
+        this.updateAuthUI();
+        return session.user;
+      }
+      this.currentUser = null;
       this.updateAuthUI();
-      return user;
-    } catch {
+      return null;
+    } catch (err) {
+      console.warn('Erro ao verificar sessão Supabase:', err);
+      this.currentUser = null;
+      this.updateAuthUI();
       return null;
     }
   }
@@ -59,8 +84,10 @@ class CloudManager {
     if (!this.client) throw new Error('Supabase não configurado');
     const { data, error } = await this.client.auth.signUp({ email, password });
     if (error) throw error;
-    this.currentUser = data.user;
-    this.updateAuthUI();
+    if (data && data.session) {
+      this.currentUser = data.user;
+      this.updateAuthUI();
+    }
     return data;
   }
 
@@ -112,21 +139,29 @@ class CloudManager {
   // --- SUPABASE DIRECT QUERIES ---
 
   async getAccounts() {
-    if (!this.client || !this.currentUser) return null;
-    const { data, error } = await this.client
-      .from('accounts')
-      .select('*')
-      .eq('archived', false)
-      .order('type', { ascending: true });
+    if (!this.client || !this.currentUser) return [];
+    try {
+      const { data, error } = await this.client
+        .from('accounts')
+        .select('*')
+        .eq('archived', false)
+        .order('type', { ascending: true });
 
-    if (error) throw error;
+      if (error) {
+        console.warn('Erro ao carregar contas do Supabase:', error);
+        return [];
+      }
 
-    return data.map(a => ({
-      ...a,
-      initial_balance: Number(a.initial_balance) / 100,
-      current_balance: Number(a.current_balance) / 100,
-      credit_limit: Number(a.credit_limit) / 100
-    }));
+      return (data || []).map(a => ({
+        ...a,
+        initial_balance: Number(a.initial_balance || 0) / 100,
+        current_balance: Number(a.current_balance || 0) / 100,
+        credit_limit: Number(a.credit_limit || 0) / 100
+      }));
+    } catch (err) {
+      console.warn('Falha em getAccounts:', err);
+      return [];
+    }
   }
 
   async createAccount(acc) {
@@ -154,19 +189,27 @@ class CloudManager {
   }
 
   async getCategories() {
-    if (!this.client || !this.currentUser) return null;
-    const { data, error } = await this.client
-      .from('categories')
-      .select('*')
-      .order('name', { ascending: true });
+    if (!this.client || !this.currentUser) return [];
+    try {
+      const { data, error } = await this.client
+        .from('categories')
+        .select('*')
+        .order('name', { ascending: true });
 
-    if (error) throw error;
+      if (error) {
+        console.warn('Erro ao carregar categorias do Supabase:', error);
+        return [];
+      }
 
-    return data.map(c => ({
-      ...c,
-      budget_limit: Number(c.budget_limit || 0) / 100,
-      spent_this_month: 0
-    }));
+      return (data || []).map(c => ({
+        ...c,
+        budget_limit: Number(c.budget_limit || 0) / 100,
+        spent_this_month: 0
+      }));
+    } catch (err) {
+      console.warn('Falha em getCategories:', err);
+      return [];
+    }
   }
 
   async createCategory(cat) {
@@ -190,35 +233,43 @@ class CloudManager {
   }
 
   async getTransactions(filters = {}) {
-    if (!this.client || !this.currentUser) return null;
-    let query = this.client
-      .from('transactions')
-      .select(`
-        *,
-        accounts:account_id(name),
-        categories:category_id(name, color, icon)
-      `)
-      .is('deleted_at', null)
-      .order('date', { ascending: false });
+    if (!this.client || !this.currentUser) return [];
+    try {
+      let query = this.client
+        .from('transactions')
+        .select(`
+          *,
+          accounts:account_id(name),
+          categories:category_id(name, color, icon)
+        `)
+        .is('deleted_at', null)
+        .order('date', { ascending: false });
 
-    if (filters.year && filters.month) {
-      const start = `${filters.year}-${String(filters.month).padStart(2, '0')}-01`;
-      const lastDay = new Date(filters.year, filters.month, 0).getDate();
-      const end = `${filters.year}-${String(filters.month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
-      query = query.gte('date', start).lte('date', end);
+      if (filters.year && filters.month) {
+        const start = `${filters.year}-${String(filters.month).padStart(2, '0')}-01`;
+        const lastDay = new Date(filters.year, filters.month, 0).getDate();
+        const end = `${filters.year}-${String(filters.month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+        query = query.gte('date', start).lte('date', end);
+      }
+
+      const { data, error } = await query;
+      if (error) {
+        console.warn('Erro ao carregar transações do Supabase:', error);
+        return [];
+      }
+
+      return (data || []).map(t => ({
+        ...t,
+        amount: Number(t.amount || 0) / 100,
+        account_name: t.accounts ? t.accounts.name : '',
+        category_name: t.categories ? t.categories.name : '',
+        category_color: t.categories ? t.categories.color : '#64748B',
+        category_icon: t.categories ? t.categories.icon : 'tag'
+      }));
+    } catch (err) {
+      console.warn('Falha em getTransactions:', err);
+      return [];
     }
-
-    const { data, error } = await query;
-    if (error) throw error;
-
-    return data.map(t => ({
-      ...t,
-      amount: Number(t.amount) / 100,
-      account_name: t.accounts ? t.accounts.name : '',
-      category_name: t.categories ? t.categories.name : '',
-      category_color: t.categories ? t.categories.color : '#64748B',
-      category_icon: t.categories ? t.categories.icon : 'tag'
-    }));
   }
 
   async createTransaction(tx) {
