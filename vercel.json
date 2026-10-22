@@ -1,5 +1,4 @@
 {
-  "version": 2,
   "cleanUrls": true,
   "headers": [
     {
@@ -23,36 +22,6 @@
           "value": "application/manifest+json"
         }
       ]
-    }
-  ],
-  "rewrites": [
-    {
-      "source": "/",
-      "destination": "/frontend/index.html"
-    },
-    {
-      "source": "/css/(.*)",
-      "destination": "/frontend/css/$1"
-    },
-    {
-      "source": "/js/(.*)",
-      "destination": "/frontend/js/$1"
-    },
-    {
-      "source": "/icons/(.*)",
-      "destination": "/frontend/icons/$1"
-    },
-    {
-      "source": "/manifest.json",
-      "destination": "/frontend/manifest.json"
-    },
-    {
-      "source": "/sw.js",
-      "destination": "/frontend/sw.js"
-    },
-    {
-      "source": "/(.*)",
-      "destination": "/frontend/$1"
     }
   ]
 }

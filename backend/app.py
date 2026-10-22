@@ -191,5 +191,6 @@ def export_csv():
     response.headers["Content-Disposition"] = "attachment; filename=extrato_financas.csv"
     return response
 
-if FRONTEND_DIR.exists():
-    app.mount("/", StaticFiles(directory=str(FRONTEND_DIR), html=True), name="frontend")
+STATIC_DIR = ROOT_DIR if (ROOT_DIR / "index.html").exists() else FRONTEND_DIR
+if STATIC_DIR.exists():
+    app.mount("/", StaticFiles(directory=str(STATIC_DIR), html=True), name="frontend")

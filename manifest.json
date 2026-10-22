@@ -1,0 +1,22 @@
+{
+  "name": "FinancePro - Gerenciador Inteligente",
+  "short_name": "FinancePro",
+  "description": "Gerenciador financeiro pessoal com fluxo de caixa, linha do tempo e previsões futuras.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#090D16",
+  "theme_color": "#090D16",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "type": "image/png",
+      "sizes": "192x192"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    }
+  ]
+}
